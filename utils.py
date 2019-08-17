@@ -1,7 +1,8 @@
 import logging
+import random
 import time
 from functools import wraps
-from typing import Union, Callable
+from typing import Callable, Union
 
 
 def throttle(seconds: Union[int, float]):
@@ -11,7 +12,7 @@ def throttle(seconds: Union[int, float]):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             nonlocal last_running
-
+            seconds = random.uniform(seconds/2, seconds + 5)
             if time.time() - last_running > seconds:
                 last_running = time.time()
                 return fn(*args, **kwargs)
