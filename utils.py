@@ -12,6 +12,7 @@ def throttle(seconds: Union[int, float]):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             nonlocal last_running
+            nonlocal seconds
             seconds = random.uniform(seconds/2, seconds + 5)
             if time.time() - last_running > seconds:
                 last_running = time.time()
