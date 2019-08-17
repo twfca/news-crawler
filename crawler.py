@@ -1,4 +1,6 @@
 import json
+import logging
+import random
 from urllib import parse
 
 import requests
@@ -10,7 +12,15 @@ from utils import throttle
 
 class Crawler:
     def __init__(self):
-        pass
+        self.load_proxy()
+
+    def load_proxy(self, f: str = 'proxies.json'):
+        self.proxies = []
+        with open(f) as proxy_file:
+            self.proxies = json.load(proxy_file)
+
+    def get_random_proxy(self):
+        return self.proxies[random.randint(0, len(self.proxies) - 1)]
 
     def get_trending_words(self):
         trending_url = 'https://trends.google.com.tw/trends/api/dailytrends?hl=zh-TW&tz=-480&geo=TW&ns=15'
@@ -26,11 +36,18 @@ class Crawler:
                 trending_words.append(bytes(query_string, 'utf8').decode('unicode_escape'))
         return trending_words
 
-    @throttle(1)
+    @throttle(20)
     def google_search(self, word: str, site: str, offset: int = 0):
-        search_url = f'https://www.google.com/search?q={word}+site:{site}&start={offset}'
+        search_url = f'https://www.google.com/search?q={word}+site:{site}{"" if offset == 0 else "&start={offset}"}'
         headers = {'User-Agent': generate_user_agent()}
-        res = requests.get(search_url, headers=headers)
+        proxy = self.get_random_proxy()
+        res = requests.get(
+            search_url,
+            headers=headers,
+            proxies={
+                'http': f'http://{proxy.ip}:{proxy.port}'
+            }
+        )
         soup = BeautifulSoup(res.content, 'html.parser')
         links = map(lambda x: x.attrs['href'], soup.find_all('a'))
         links = filter(lambda x: x.startswith('/url'), links)
@@ -39,6 +56,7 @@ class Crawler:
         links = list(links)
 
         if not links:
+            logging.warning(f'Possible failed: {site} {word}')
             hostname = parse.urlparse(site).hostname
             with open(f'possible_failed/{hostname}_{word}.html', 'w') as out:
                 out.write(bytes(str(res.content), 'utf8').decode('unicode_escape'))
