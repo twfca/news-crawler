@@ -45,7 +45,7 @@ class Crawler:
             search_url,
             headers=headers,
             proxies={
-                'http': f'http://{proxy.ip}:{proxy.port}'
+                'http': f'http://{proxy["ip"]}:{proxy["port"]}'
             }
         )
         soup = BeautifulSoup(res.content, 'html.parser')
