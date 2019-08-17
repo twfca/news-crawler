@@ -3,6 +3,7 @@ from urllib import parse
 
 import requests
 from bs4 import BeautifulSoup
+from user_agent import generate_user_agent
 
 from utils import throttle
 
@@ -28,7 +29,8 @@ class Crawler:
     @throttle(1)
     def google_search(self, word: str, site: str, offset: int = 0):
         search_url = f'https://www.google.com/search?q={word}+site:{site}&start={offset}'
-        res = requests.get(search_url)
+        headers = {'User-Agent': generate_user_agent()}
+        res = requests.get(search_url, headers=headers)
         soup = BeautifulSoup(res.content, 'html.parser')
         links = map(lambda x: x.attrs['href'], soup.find_all('a'))
         links = filter(lambda x: x.startswith('/url'), links)
