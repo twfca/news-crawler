@@ -1,2 +1,4 @@
 news-crawler/*
 .vscode/*
+*.pyc
+news.db
