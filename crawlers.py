@@ -54,7 +54,7 @@ class GoogleCrawler(Crawler):
         links = map(lambda x: x.attrs['href'], links)
         links = filter(lambda x: x.startswith('/url'), links)
         links = map(lambda x: parse.parse_qs(parse.urlparse(x).query)['q'][0], links)
-        links = filter(lambda x: not x.startswith('/'))
+        links = filter(lambda x: not x.startswith('/'), links)
         links = filter(lambda x: not self.is_google_site(x), links)
         links = list(links)
 
