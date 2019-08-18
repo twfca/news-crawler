@@ -1,5 +1,5 @@
 import json
-from crawler import Crawler
+from crawlers import GoogleCrawler
 import sqlite3
 
 def load_websites(f: str = 'websites.json'):
@@ -23,11 +23,11 @@ def insert_links_to_db(links: list):
     conn.close()
 
 def get_target_links(websites: dict):
-    c = Crawler()
+    c = GoogleCrawler()
     words = c.get_trending_words()
     links = []
-    for site in websites:
-        for word in words:
+    for word in words:
+        for site in websites:
             ls = c.google_search(word, site['url'])
             insert_links_to_db(ls)
             links = links + ls

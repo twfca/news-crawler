@@ -12,29 +12,29 @@ from utils import throttle
 
 class Crawler:
     def __init__(self):
-        self.load_proxy()
+        self.proxies = self.load_proxy()
 
     def load_proxy(self, f: str = 'proxies.json'):
-        self.proxies = []
+        proxies = []
         with open(f) as proxy_file:
-            self.proxies = json.load(proxy_file)
+            proxies = json.load(proxy_file)
+        return proxies
 
     def get_random_proxy(self):
-        return self.proxies[random.randint(0, len(self.proxies) - 1)]
+        proxy = self.proxies[random.randint(0, len(self.proxies) - 1)]
+        return f'{proxy["ip"]}:{proxy["port"]}'
 
-    def get_trending_words(self):
-        trending_url = 'https://trends.google.com.tw/trends/api/dailytrends?hl=zh-TW&tz=-480&geo=TW&ns=15'
-        res = requests.get(trending_url)
-        res = str(res.content).split('\\n')[1].strip('\'')
-        raw_trending = json.loads(res, encoding='utf8')
-        raw_trending = raw_trending['default']['trendingSearchesDays']
 
-        trending_words = []
-        for searches in raw_trending:
-            for search in searches['trendingSearches']:
-                query_string = search['title']['query']
-                trending_words.append(bytes(query_string, 'utf8').decode('unicode_escape'))
-        return trending_words
+class GoogleCrawler(Crawler):
+    def __init__(self):
+        super().__init__()
+
+    @staticmethod
+    def is_google_site(url: str):
+        hostname = parse.urlparse(url).hostname
+        if not hostname:
+            return False
+        return hostname.endswith('google.com')
 
     @throttle(20)
     def google_search(self, word: str, site: str, offset: int = 0):
@@ -45,7 +45,7 @@ class Crawler:
             search_url,
             headers=headers,
             proxies={
-                'http': f'http://{proxy["ip"]}:{proxy["port"]}'
+                'http': f'http://{proxy}'
             }
         )
         soup = BeautifulSoup(res.content, 'html.parser')
@@ -63,9 +63,16 @@ class Crawler:
 
         return links
 
-    @staticmethod
-    def is_google_site(url: str):
-        hostname = parse.urlparse(url).hostname
-        if not hostname:
-            return False
-        return hostname.endswith('google.com')
+    def get_trending_words(self):
+        trending_url = 'https://trends.google.com.tw/trends/api/dailytrends?hl=zh-TW&tz=-480&geo=TW&ns=15'
+        res = requests.get(trending_url)
+        res = str(res.content).split('\\n')[1].strip('\'')
+        raw_trending = json.loads(res, encoding='utf8')
+        raw_trending = raw_trending['default']['trendingSearchesDays']
+
+        trending_words = []
+        for searches in raw_trending:
+            for search in searches['trendingSearches']:
+                query_string = search['title']['query']
+                trending_words.append(bytes(query_string, 'utf8').decode('unicode_escape'))
+        return trending_words
