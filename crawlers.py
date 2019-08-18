@@ -1,13 +1,14 @@
 import json
 import logging
 import random
+import time
 from urllib import parse
 
 import requests
 from bs4 import BeautifulSoup
-from news import Article
 from user_agent import generate_user_agent
 
+from news import Article
 from utils import throttle
 
 
@@ -73,11 +74,13 @@ class GoogleCrawler(Crawler):
         raw_trending = json.loads(res, encoding='utf8')
         raw_trending = raw_trending['default']['trendingSearchesDays']
 
-        trending_words = []
+        trending_words = {}
         for searches in raw_trending:
+            timestamp = int(time.mktime(time.strptime(searches['date'], '%Y%m%d')))
             for search in searches['trendingSearches']:
                 query_string = search['title']['query']
-                trending_words.append(bytes(query_string, 'utf8').decode('unicode_escape'))
+                word = bytes(query_string, 'utf8').decode('unicode_escape')
+                trending_words[word] = timestamp
         return trending_words
 
 
