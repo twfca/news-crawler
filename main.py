@@ -1,5 +1,5 @@
 import json
-from crawlers import GoogleCrawler
+from crawlers import GoogleCrawler, NewsCrawler
 import sqlite3
 
 def load_websites(f: str = 'websites.json'):
@@ -12,9 +12,11 @@ def insert_links_to_db(links: list):
     conn = sqlite3.connect('news.db')
     # pylint: enable=no-member
     conn.execute('create table if not exists articles (\
-        url text primary key,\
-        title text,\
-        content text\
+        url TEXT primary key,\
+        title TEXT,\
+        content TEXT,\
+        author TEXT,\
+        date INTEGER\
         )')
 
     for link in links:
@@ -33,4 +35,30 @@ def get_target_links(websites: dict):
             links = links + ls
     return links
 
-links = get_target_links(load_websites())
+def get_pending_targets():
+    # pylint: disable=no-member
+    conn = sqlite3.connect('news.db')
+    # pylint: enable=no-member
+
+    result = conn.execute(f'select * from articles where title is NULL')
+    urls = result.fetchall()
+    urls = map(lambda url: url[0], urls)
+
+    nc = NewsCrawler()
+    for url in urls:
+        news = nc.parse_news_url(url)
+        if not news.title:
+            continue
+        params = (news.title, news.content, news.author, news.date, url)
+        conn.execute(f'update articles\
+            set title = ?,\
+                content = ?,\
+                author = ?,\
+                date = ?\
+            where url = ?',
+        params)
+        conn.commit()
+
+
+if __name__ == '__main__':
+    get_pending_targets()
