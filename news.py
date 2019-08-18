@@ -1,7 +1,7 @@
 from twnews.soup import NewsSoup
 
 
-class News:
+class Article:
     def __init__(self, url: str, nsoup: NewsSoup = None):
         if nsoup is None:
             nsoup = NewsSoup(url)

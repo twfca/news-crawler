@@ -5,7 +5,7 @@ from urllib import parse
 
 import requests
 from bs4 import BeautifulSoup
-from news import News
+from news import Article
 from user_agent import generate_user_agent
 
 from utils import throttle
@@ -85,4 +85,4 @@ class NewsCrawler(Crawler):
 
     @throttle(10)
     def parse_news_url(self, url: str):
-        return News(url)
+        return Article(url)
