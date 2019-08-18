@@ -50,9 +50,11 @@ class GoogleCrawler(Crawler):
             }
         )
         soup = BeautifulSoup(res.content, 'html.parser')
-        links = map(lambda x: x.attrs['href'], soup.find_all('a'))
+        links = filter(lambda x: 'href' in x.attrs, soup.find_all('a'))
+        links = map(lambda x: x.attrs['href'], links)
         links = filter(lambda x: x.startswith('/url'), links)
         links = map(lambda x: parse.parse_qs(parse.urlparse(x).query)['q'][0], links)
+        links = filter(lambda x: not x.startswith('/'))
         links = filter(lambda x: not self.is_google_site(x), links)
         links = list(links)
 
