@@ -5,6 +5,7 @@ from urllib import parse
 
 import requests
 from bs4 import BeautifulSoup
+from news import News
 from user_agent import generate_user_agent
 
 from utils import throttle
@@ -76,3 +77,12 @@ class GoogleCrawler(Crawler):
                 query_string = search['title']['query']
                 trending_words.append(bytes(query_string, 'utf8').decode('unicode_escape'))
         return trending_words
+
+
+class NewsCrawler(Crawler):
+    def __init__(self):
+        super().__init__()
+
+    @throttle(10)
+    def parse_news_url(self, url: str):
+        return News(url)
