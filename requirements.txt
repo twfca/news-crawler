@@ -3,3 +3,4 @@ pony
 pathlib
 pylint
 user_agent
+rope
