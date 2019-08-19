@@ -9,9 +9,9 @@ import requests
 from bs4 import BeautifulSoup
 from user_agent import generate_user_agent
 
-from const import data_dir
+from const import data_dir, log_dir
 from libs.utils import random_throttle
-from news import Article
+from models.article import Article
 
 
 class Crawler:
@@ -24,7 +24,7 @@ class Crawler:
             proxies = json.load(proxy_file)
         return proxies
 
-    def get_random_proxy_str(self):
+    def get_random_proxy_str(self) -> str:
         proxy = self.proxies[random.randint(0, len(self.proxies) - 1)]
         return f'{proxy["ip"]}:{proxy["port"]}'
 
@@ -41,7 +41,7 @@ class GoogleCrawler(Crawler):
         return hostname.endswith('google.com')
 
     @random_throttle(20)
-    def google_search(self, word: str, site: str, offset: int = 0):
+    def google_search(self, word: str, site: str, offset: int = 0) -> list:
         search_url = f'https://www.google.com/search?q={word}+site:{site}{"" if offset == 0 else "&start={offset}"}'
         headers = {'User-Agent': generate_user_agent()}
         proxy = self.get_random_proxy_str()
@@ -53,18 +53,25 @@ class GoogleCrawler(Crawler):
             }
         )
         soup = BeautifulSoup(res.content, 'html.parser')
-        links = filter(lambda x: 'href' in x.attrs, soup.find_all('a'))
-        links = map(lambda x: x.attrs['href'], links)
-        links = filter(lambda x: x.startswith('/url'), links)
-        links = map(lambda x: parse.parse_qs(parse.urlparse(x).query)['q'][0], links)
-        links = filter(lambda x: not x.startswith('/'), links)
-        links = filter(lambda x: not self.is_google_site(x), links)
-        links = list(links)
+        links = []
+        for element in soup.find_all('a'):
+            if 'href' not in element.attrs:
+                continue
+            link = element.attr['href']
+            if not link.startswith('/url'):
+                continue
+            l = parse.parse_qs(parse.urlparse(link).query)['q'][0]
+            if l.startswith('/'):
+                logging.warning(f'Parse link failed: {link}, after:{l}')
+                continue
+            if self.is_google_site(l):
+                continue
+            links.append(l)
 
         if not links:
             logging.warning(f'Possible failed: {site} {word}')
             hostname = parse.urlparse(site).hostname
-            with open(f'possible_failed/{hostname}_{word}.html', 'w') as out:
+            with open(log_dir / f'{hostname}_{word}.html', 'w') as out:
                 out.write(bytes(str(res.content), 'utf8').decode('unicode_escape'))
 
         return links
