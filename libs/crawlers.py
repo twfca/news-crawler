@@ -2,27 +2,29 @@ import json
 import logging
 import random
 import time
+from pathlib import Path
 from urllib import parse
 
 import requests
 from bs4 import BeautifulSoup
 from user_agent import generate_user_agent
 
-from news import Article
+from const import data_dir
 from libs.utils import random_throttle
+from news import Article
 
 
 class Crawler:
     def __init__(self):
         self.proxies = self.load_proxy()
 
-    def load_proxy(self, f: str = 'proxies.json'):
+    def load_proxy(self, path: Path = data_dir / 'proxies.json') -> list:
         proxies = []
-        with open(f) as proxy_file:
+        with open(path) as proxy_file:
             proxies = json.load(proxy_file)
         return proxies
 
-    def get_random_proxy(self):
+    def get_random_proxy_str(self):
         proxy = self.proxies[random.randint(0, len(self.proxies) - 1)]
         return f'{proxy["ip"]}:{proxy["port"]}'
 
@@ -42,7 +44,7 @@ class GoogleCrawler(Crawler):
     def google_search(self, word: str, site: str, offset: int = 0):
         search_url = f'https://www.google.com/search?q={word}+site:{site}{"" if offset == 0 else "&start={offset}"}'
         headers = {'User-Agent': generate_user_agent()}
-        proxy = self.get_random_proxy()
+        proxy = self.get_random_proxy_str()
         res = requests.get(
             search_url,
             headers=headers,
