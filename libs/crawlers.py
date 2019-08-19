@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 from user_agent import generate_user_agent
 
 from news import Article
-from utils import throttle
+from libs.utils import random_throttle
 
 
 class Crawler:
@@ -38,7 +38,7 @@ class GoogleCrawler(Crawler):
             return False
         return hostname.endswith('google.com')
 
-    @throttle(20)
+    @random_throttle(20)
     def google_search(self, word: str, site: str, offset: int = 0):
         search_url = f'https://www.google.com/search?q={word}+site:{site}{"" if offset == 0 else "&start={offset}"}'
         headers = {'User-Agent': generate_user_agent()}
@@ -88,6 +88,6 @@ class NewsCrawler(Crawler):
     def __init__(self):
         super().__init__()
 
-    @throttle(10)
+    @random_throttle(10)
     def parse_news_url(self, url: str):
         return Article(url)
