@@ -1,4 +1,5 @@
-news-crawler/*
+venv/*
 .vscode/*
 *.pyc
 news.db
+.env
