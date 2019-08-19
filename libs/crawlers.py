@@ -53,6 +53,17 @@ class GoogleCrawler(Crawler):
             }
         )
         soup = BeautifulSoup(res.content, 'html.parser')
+        links = self.get_links_from_soup(soup)
+
+        if not links:
+            logging.warning(f'Possible failed: {site} {word}')
+            hostname = parse.urlparse(site).hostname
+            with open(log_dir / f'{hostname}_{word}.html', 'w') as out:
+                out.write(bytes(str(res.content), 'utf8').decode('unicode_escape'))
+
+        return links
+
+    def get_links_from_soup(self, soup: BeautifulSoup):
         links = []
         for element in soup.find_all('a'):
             if 'href' not in element.attrs:
@@ -67,13 +78,6 @@ class GoogleCrawler(Crawler):
             if self.is_google_site(l):
                 continue
             links.append(l)
-
-        if not links:
-            logging.warning(f'Possible failed: {site} {word}')
-            hostname = parse.urlparse(site).hostname
-            with open(log_dir / f'{hostname}_{word}.html', 'w') as out:
-                out.write(bytes(str(res.content), 'utf8').decode('unicode_escape'))
-
         return links
 
     def get_trending_words(self):
