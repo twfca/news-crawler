@@ -1,0 +1,26 @@
+[
+    {
+        "name": "自由時報",
+        "url": "http://m.ltn.com.tw/news/"
+    },
+    {
+        "name": "中時電子報",
+        "url": "https://www.chinatimes.com/realtimenews"
+    },
+    {
+        "name": "中央社",
+        "url": "https://www.cna.com.tw/news/"
+    },
+    {
+        "name": "東森新聞雲",
+        "url": "https://www.ettoday.net/news/"
+    },
+    {
+        "name": "三立新聞網",
+        "url": "https://www.setn.com/News.aspx"
+    },
+    {
+        "name": "聯合新聞網",
+        "url": "https://udn.com/news/"
+    }
+]
