@@ -3,6 +3,7 @@ import logging
 import random
 import time
 from pathlib import Path
+from typing import Dict
 from urllib import parse
 
 import requests
@@ -12,6 +13,8 @@ from user_agent import generate_user_agent
 from const import data_dir, log_dir
 from libs.utils import random_throttle
 from models.article import Article
+from models.trend import Trend
+from models.website import Website
 
 
 class Crawler:
@@ -24,9 +27,18 @@ class Crawler:
             proxies = json.load(proxy_file)
         return proxies
 
-    def get_random_proxy_str(self) -> str:
+    def get_random_proxy(self) -> Dict:
         proxy = self.proxies[random.randint(0, len(self.proxies) - 1)]
-        return f'{proxy["ip"]}:{proxy["port"]}'
+        return {'http': f'http://{proxy["ip"]}:{proxy["port"]}'}
+
+    def get_tor_proxy(self) -> Dict:
+        return {
+            'http': 'socks5h://localhost:9050',
+            'https': 'socks5h://localhost:9050'
+        }
+
+    def renew_ip(self):
+        pass
 
 
 class GoogleCrawler(Crawler):
@@ -38,21 +50,20 @@ class GoogleCrawler(Crawler):
         hostname = parse.urlparse(url).hostname
         if not hostname:
             return False
-        return hostname.endswith('google.com')
+        return hostname.find('google') != -1
 
-    @random_throttle(20)
-    def google_search(self, word: str, site: str, offset: int = 0) -> list:
+    @random_throttle(30)
+    def google_search(self, trend: Trend, site: Website, offset: int = 0) -> list:
+        word = trend.keyword.name
+        site = site.url
         search_url = f'https://www.google.com/search?q={word}+site:{site}{"" if offset == 0 else "&start={offset}"}'
         headers = {'User-Agent': generate_user_agent()}
-        proxy = self.get_random_proxy_str()
         res = requests.get(
             search_url,
             headers=headers,
-            proxies={
-                'http': f'http://{proxy}'
-            }
+            proxies=self.get_random_proxy()
         )
-        soup = BeautifulSoup(res.content, 'html.parser')
+        soup = BeautifulSoup(res.content)
         links = self.get_links_from_soup(soup)
 
         if not links:
@@ -68,21 +79,29 @@ class GoogleCrawler(Crawler):
         for element in soup.find_all('a'):
             if 'href' not in element.attrs:
                 continue
-            link = element.attr['href']
-            if not link.startswith('/url'):
+            link = element.attrs['href']
+            if link.startswith('/url'):
+                try:
+                    l = parse.parse_qs(parse.urlparse(link).query)['q'][0]
+                except KeyError:
+                    l = parse.parse_qs(parse.urlparse(link).query)['url'][0]
+                if l.startswith('/'):
+                    logging.warning(f'Parse link failed: {link}, after:{l}')
+                    continue
+                if self.is_google_site(l):
+                    continue
+                links.append(l)
+            elif link.startswith('/search'):
                 continue
-            l = parse.parse_qs(parse.urlparse(link).query)['q'][0]
-            if l.startswith('/'):
-                logging.warning(f'Parse link failed: {link}, after:{l}')
-                continue
-            if self.is_google_site(l):
-                continue
-            links.append(l)
+            elif not self.is_google_site(link):
+                if not parse.urlparse(link).netloc:
+                    continue
+                links.append(link)
         return links
 
     def get_trending_words(self):
-        trending_url = 'https://trends.google.com.tw/trends/api/dailytrends?hl=zh-TW&tz=-480&geo=TW&ns=15'
-        res = requests.get(trending_url)
+        trend_base_url = 'https://trends.google.com.tw/trends/api/dailytrends?hl=zh-TW&tz=-480&geo=TW&ns=15'
+        res = requests.get(trend_base_url)
         res = str(res.content).split('\\n')[1].strip('\'')
         raw_trending = json.loads(res, encoding='utf8')
         raw_trending = raw_trending['default']['trendingSearchesDays']
