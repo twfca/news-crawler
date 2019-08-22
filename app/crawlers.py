@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import random
 import time
 from pathlib import Path
@@ -7,7 +8,9 @@ from typing import Dict
 from urllib import parse
 
 import requests
+from stem import Signal
 from bs4 import BeautifulSoup
+from stem.control import Controller
 from user_agent import generate_user_agent
 
 from const import data_dir, log_dir
@@ -33,12 +36,16 @@ class Crawler:
 
     def get_tor_proxy(self) -> Dict:
         return {
-            'http': 'socks5h://localhost:9050',
-            'https': 'socks5h://localhost:9050'
+            'http': 'socks5://localhost:9050',
+            'https': 'socks5://localhost:9050'
         }
 
     def renew_ip(self):
-        pass
+        with Controller.from_port(port=9051) as controller:
+            controller.authenticate(os.getenv('TOR_PASSWORD'))
+            # pylint: disable=no-member
+            controller.signal(Signal.NEWNYM)
+            # pylint: enable=no-member
 
 
 class GoogleCrawler(Crawler):
@@ -58,12 +65,11 @@ class GoogleCrawler(Crawler):
         site = site.url
         search_url = f'https://www.google.com/search?q={word}+site:{site}{"" if offset == 0 else "&start={offset}"}'
         headers = {'User-Agent': generate_user_agent()}
-        res = requests.get(
-            search_url,
-            headers=headers,
-            proxies=self.get_random_proxy()
-        )
-        soup = BeautifulSoup(res.content)
+        session = requests.session()
+        session.headers = headers
+        session.proxies = self.get_tor_proxy()
+        res = session.get(search_url)
+        soup = BeautifulSoup(res.content, 'html.parser')
         links = self.get_links_from_soup(soup)
 
         if not links:
@@ -71,6 +77,7 @@ class GoogleCrawler(Crawler):
             hostname = parse.urlparse(site).hostname
             with open(log_dir / f'{hostname}_{word}.html', 'w') as out:
                 out.write(bytes(str(res.content), 'utf8').decode('unicode_escape'))
+            self.renew_ip()
 
         return links
 

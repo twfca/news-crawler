@@ -1,64 +1,47 @@
-import json
-from crawlers import GoogleCrawler, NewsCrawler
-import sqlite3
+from models.utils import get_database
+from app.controllers.website_controller import WebsiteController
+from app.controllers.article_controller import ArticleController
+from app.controllers.trend_controller import TrendController
+from app.crawlers import GoogleCrawler
+import logging
 
-def load_websites(f: str = 'websites.json'):
-    with open(f) as websites_file:
-        websites = json.load(websites_file)
-    return websites
+import pony.orm as orm
 
-def insert_links_to_db(links: list):
-    # pylint: disable=no-member
-    conn = sqlite3.connect('news.db')
-    # pylint: enable=no-member
-    conn.execute('create table if not exists articles (\
-        url TEXT primary key,\
-        title TEXT,\
-        content TEXT,\
-        author TEXT,\
-        date INTEGER\
-        )')
+def crawl_trends():
+    google_crawler = GoogleCrawler()
+    trends = google_crawler.get_trending_words()
+    trend_controller = TrendController()
+    ts = []
+    for name, timestamp in trends.items():
+        ts.append(trend_controller.insert_or_ignore(name, timestamp))
+    return ts
 
-    for link in links:
-        conn.execute('insert or ignore into articles (url) values (?)', (link,))
-    conn.commit()
-    conn.close()
+@orm.db_session
+def crawl_article_urls():
+    trend_controller = TrendController()
+    website_controller = WebsiteController()
+    article_controller = ArticleController()
 
-def get_target_links(websites: dict):
-    c = GoogleCrawler()
-    words = c.get_trending_words()
-    links = []
-    for word in words:
-        for site in websites:
-            ls = c.google_search(word, site['url'])
-            insert_links_to_db(ls)
-            links = links + ls
-    return links
+    google_crawler = GoogleCrawler()
 
-def get_pending_targets():
-    # pylint: disable=no-member
-    conn = sqlite3.connect('news.db')
-    # pylint: enable=no-member
+    trends = trend_controller.get_first(40)
+    websites = website_controller.get_websites()
 
-    result = conn.execute(f'select * from articles where title is NULL')
-    urls = result.fetchall()
-    urls = map(lambda url: url[0], urls)
-
-    nc = NewsCrawler()
-    for url in urls:
-        news = nc.parse_news_url(url)
-        if not news.title:
-            continue
-        params = (news.title, news.content, news.author, news.date, url)
-        conn.execute(f'update articles\
-            set title = ?,\
-                content = ?,\
-                author = ?,\
-                date = ?\
-            where url = ?',
-        params)
-        conn.commit()
-
+    articles = []
+    for trend in trends:
+        for website in websites:
+            links = google_crawler.google_search(trend, website)
+            for link in links:
+                article = article_controller.insert_or_ignore(link)
+                article.trend = trend
+                article.website = website
+                print(article.url, trend.keyword.name, website.name)
+                orm.commit()
+                articles.append(article)
+    return articles
 
 if __name__ == '__main__':
-    get_pending_targets()
+    logging.getLogger("stem").setLevel(logging.ERROR)
+    db = get_database()
+    db.generate_mapping(create_tables=True)
+    articles = crawl_article_urls()
