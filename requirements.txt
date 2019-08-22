@@ -4,3 +4,5 @@ pathlib
 pylint
 user_agent
 rope
+pysocks
+stem
