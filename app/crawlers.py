@@ -22,6 +22,7 @@ from models.website import Website
 
 class Crawler:
     def __init__(self):
+        self.captcha = 0
         self.proxies = self.load_proxy()
 
     def load_proxy(self, path: Path = data_dir / 'proxies.json') -> list:
@@ -59,7 +60,7 @@ class GoogleCrawler(Crawler):
             return False
         return hostname.find('google') != -1
 
-    @random_throttle(30)
+    @random_throttle(60)
     def google_search(self, trend: Trend, site: Website, offset: int = 0) -> list:
         word = trend.keyword.name
         site = site.url
@@ -67,7 +68,7 @@ class GoogleCrawler(Crawler):
         headers = {'User-Agent': generate_user_agent()}
         session = requests.session()
         session.headers = headers
-        session.proxies = self.get_tor_proxy()
+        session.proxies = self.get_random_proxy()
         res = session.get(search_url)
         soup = BeautifulSoup(res.content, 'html.parser')
         links = self.get_links_from_soup(soup)
@@ -77,6 +78,9 @@ class GoogleCrawler(Crawler):
             hostname = parse.urlparse(site).hostname
             with open(log_dir / f'{hostname}_{word}.html', 'w') as out:
                 out.write(bytes(str(res.content), 'utf8').decode('unicode_escape'))
+            if self.captcha == 2:
+                raise RuntimeError('Stop for captcha')
+            self.captcha += 1
             self.renew_ip()
 
         return links
