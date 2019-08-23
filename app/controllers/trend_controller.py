@@ -36,4 +36,4 @@ class TrendController(Controller):
 
     @orm.db_session
     def get_first(self, limit: int, offset: int = 0) -> List[Trend]:
-        return orm.select(t for t in Trend).order_by(orm.desc(lambda t: t.timestamp)).limit(limit, offset)
+        return orm.select(t for t in Trend).order_by(lambda t: orm.desc(t.timestamp)).limit(limit, offset)
