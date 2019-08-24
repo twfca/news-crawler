@@ -63,8 +63,8 @@ class GoogleCrawler(Crawler):
     @random_throttle(60)
     def google_search(self, trend: Trend, site: Website, offset: int = 0) -> list:
         word = trend.keyword.name
-        site = site.url
-        search_url = f'https://www.google.com/search?q={word}+site:{site}{"" if offset == 0 else "&start={offset}"}'
+        site_url = site.url
+        search_url = f'https://www.google.com/search?q={word}+site:{site_url}{"" if offset == 0 else "&start={offset}"}'
         headers = {'User-Agent': generate_user_agent()}
         session = requests.session()
         session.headers = headers
@@ -74,8 +74,8 @@ class GoogleCrawler(Crawler):
         links = self.get_links_from_soup(soup)
 
         if not links:
-            logging.warning(f'Possible failed: {site} {word}')
-            hostname = parse.urlparse(site).hostname
+            logging.warning('Possible failed: %r %r', site_url, word)
+            hostname = parse.urlparse(site_url).hostname
             with open(log_dir / f'{hostname}_{word}.html', 'w') as out:
                 out.write(bytes(str(res.content), 'utf8').decode('unicode_escape'))
             if self.captcha == 2:
@@ -97,7 +97,7 @@ class GoogleCrawler(Crawler):
                 except KeyError:
                     l = parse.parse_qs(parse.urlparse(link).query)['url'][0]
                 if l.startswith('/'):
-                    logging.warning(f'Parse link failed: {link}, after:{l}')
+                    logging.warning('Parse link failed: %r, after:%r', link, l)
                     continue
                 if self.is_google_site(l):
                     continue

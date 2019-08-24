@@ -22,7 +22,9 @@ def throttle(seconds: Union[int, float]):
 
             while time.time() - last_running <= seconds:
                 logging.info(
-                    f'{fn.__name__} will be called after {seconds-time.time()+last_running:.0f} second'
+                    '%r will be called after %.0f second',
+                    fn.__name__,
+                    seconds-time.time()+last_running
                 )
                 time.sleep(1)
 
@@ -42,7 +44,11 @@ def cache(fn: Callable):
         key = pickle.dumps(args) + pickle.dumps(kwargs)
 
         if key not in memo:
-            logging.debug(f'Caching {fn.__name__} {args} {kwargs}...')
+            logging.debug('Caching %r %r %r...',
+                fn.__name__,
+                args,
+                kwargs
+            )
             memo[key] = fn(*args, **kwargs)
 
         return memo[key]
