@@ -1,0 +1,12 @@
+{
+  "binary": "/home/dakaizou/Projects/news-crawler/venv/bin/pyre.bin",
+  "search_path": [
+    "./venv/lib/python3.7/site-packages",
+    "./venv/lib64/python3.7/site-packages"
+  ],
+  "source_directories": [
+    "."
+  ],
+  "exclude": [".*/venv/.*"],
+  "typeshed": "/home/dakaizou/Projects/news-crawler/venv/lib/pyre_check/typeshed/"
+}

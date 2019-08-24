@@ -6,4 +6,4 @@ user_agent
 rope
 pysocks
 stem
-mypy
+pyre-check
