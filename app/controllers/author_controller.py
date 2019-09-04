@@ -12,14 +12,14 @@ class AuthorController(Controller):
         super().__init__()
 
     @orm.db_session
-    def insert(self, name: str, site: Website) -> Author:
-        return Author(name=name, website=Website)
+    def insert(self, name: str) -> Author:
+        return Author(name=name)
 
     def insert_or_ignore(self, name:str, site: Website) -> Author:
         author = self.select_by_name_and_site(name, site)
         if author:
             return author
-        return self.insert(name, site)
+        return self.insert(name)
 
     @orm.db_session
     def select_by_name_and_site(self, name: str, site: Website) -> Author:
