@@ -8,9 +8,10 @@ from typing import Dict
 from urllib import parse
 
 import requests
-from stem import Signal
 from bs4 import BeautifulSoup
+from stem import Signal
 from stem.control import Controller
+from twnews.soup import NewsSoup
 from user_agent import generate_user_agent
 
 from const import data_dir, log_dir
@@ -81,7 +82,9 @@ class GoogleCrawler(Crawler):
             if self.captcha == 2:
                 raise RuntimeError('Stop for captcha')
             self.captcha += 1
-            self.renew_ip()
+            # self.renew_ip()
+        else:
+            self.captcha = 0
 
         return links
 
@@ -133,4 +136,5 @@ class NewsCrawler(Crawler):
 
     @random_throttle(10)
     def parse_news_url(self, url: str):
-        return Article(url)
+        soup = NewsSoup(url)
+        return soup
